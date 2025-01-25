@@ -5,7 +5,7 @@ import random
 import time
 
 # Your GitHub personal access token
-token = 'your_personal_access_token'  # Replace with your GitHub token
+token = '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'  # Replace with your GitHub token
 
 # GitHub repository details
 owner = 'KhadeerBasha1232'
