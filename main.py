@@ -79,14 +79,15 @@ def commit_and_push_empty():
 def run_periodically():
     while True:
         # Generate a random time interval between 1 and 3 hours (in seconds)
+        print("commiting ......")
+        commit_and_push_empty()
+        print("commit done.........")
         interval = random.randint(1, 3) * 60 * 60
         print(f"Next commit will be made after {interval / 3600} hours...")
 
         # Wait for the random interval before committing
         time.sleep(interval)
 
-        # Make the commit
-        commit_and_push_empty()
 
 if __name__ == '__main__':
     run_periodically()
