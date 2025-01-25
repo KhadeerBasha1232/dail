@@ -26,20 +26,27 @@ def get_latest_commit():
     response.raise_for_status()
     return response.json()['commit']
 
+# Function to get the tree SHA from the latest commit
+def get_tree_sha(commit_sha):
+    url = f'{base_url}/git/commits/{commit_sha}'
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()['tree']['sha']
+
 # Function to create a new commit with an empty tree
-def create_empty_commit(commit_sha):
+def create_empty_commit(tree_sha, commit_sha):
     # Create a new empty commit object
     commit_message = f'Empty commit - {datetime.now().isoformat()}'
     data = {
         'message': commit_message,
-        'tree': commit_sha,  # Use the latest commit SHA for the empty commit
+        'tree': tree_sha,  # Use the latest tree SHA for the empty commit
         'parents': [commit_sha]
     }
-    
+
     url = f'{base_url}/git/commits'
     response = requests.post(url, headers=headers, data=json.dumps(data))
     response.raise_for_status()
-    
+
     return response.json()
 
 # Function to update the reference of the branch (point it to the new commit)
@@ -48,7 +55,7 @@ def update_branch_reference(new_commit_sha):
     data = {
         'sha': new_commit_sha
     }
-    
+
     response = requests.patch(url, headers=headers, data=json.dumps(data))
     response.raise_for_status()
     print(f"Successfully pushed the empty commit to {branch} branch.")
@@ -61,11 +68,14 @@ def commit_and_push_empty():
         latest_commit = get_latest_commit()
         commit_sha = latest_commit['sha']
 
-        # Step 2: Create the empty commit using the latest commit's SHA
-        print("Creating the empty commit...")
-        empty_commit = create_empty_commit(commit_sha)
+        # Step 2: Get the tree SHA from the latest commit
+        tree_sha = get_tree_sha(commit_sha)
 
-        # Step 3: Update the branch reference to point to the new empty commit
+        # Step 3: Create the empty commit using the tree SHA
+        print("Creating the empty commit...")
+        empty_commit = create_empty_commit(tree_sha, commit_sha)
+
+        # Step 4: Update the branch reference to point to the new empty commit
         print("Updating the branch reference...")
         update_branch_reference(empty_commit['sha'])
         print("Empty commit successfully created and pushed.")
@@ -75,15 +85,18 @@ def commit_and_push_empty():
     except Exception as e:
         print(f"Error: {e}")
 
-# Function to run the commit periodically with a random interval (between 1 and 3 hours)
+# Function to run the commit periodically with a random interval (between 1 and 2 hours)
 def run_periodically():
     while True:
-        # Generate a random time interval between 1 and 3 hours (in seconds)
-        print("commiting ......")
+
+
+        print("Committing ......")
         commit_and_push_empty()
-        print("commit done.........")
-        interval = random.randint(1, 3) * 60 * 60
-        print(f"Next commit will be made after {interval / 3600} hours...")
+        print("Commit done.........")
+        
+        # Generate a random time interval between 1 and 2 hours (in seconds)
+        interval = random.randint(1, 2) * 60 * 60
+        print(f"Committing in {interval / 3600} hours...")
 
         # Wait for the random interval before committing
         time.sleep(interval)
