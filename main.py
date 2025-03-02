@@ -88,17 +88,14 @@ def commit_and_push_empty():
 # Function to run the commit periodically with a random interval (between 1 and 2 hours)
 def run_periodically():
     while True:
-
-
         print("Committing ......")
         commit_and_push_empty()
         print("Commit done.........")
-        
-        # Generate a random time interval between 1 and 2 hours (in seconds)
-        interval = random.randint(1, 2) * 60 * 60
-        print(f"Committing in {interval / 3600} hours...")
 
-        # Wait for the random interval before committing
+        # Generate a random time interval between 1 minute (60 seconds) and 4 hours (14400 seconds)
+        interval = random.randint(1, 240) * 60
+        print(f"Committing in {interval / 60} minutes...")
+
         time.sleep(interval)
 
 
