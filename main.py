@@ -99,19 +99,23 @@ def run_periodically():
         time.sleep(interval)
 
 
-from datetime import datetime
+urls = [
+    "https://quaint-albertine-clustercompany-99d4f8b7.koyeb.app/",
+    "https://kb-help.onrender.com/"
+]
 
 def keep_flask_alive():
     while True:
-        try:
-            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"[{current_time}] Pinging Flask...")
-            
-            response = requests.get('https://quaint-albertine-clustercompany-99d4f8b7.koyeb.app/', timeout=10)
-            print(f"[{current_time}] Pinged Flask: {response.status_code}, Text: {response.text}")
-        except requests.exceptions.RequestException as e:
-            print(f"[{current_time}] Error pinging Flask: {e}")
-        
+        for url in urls:
+            try:
+                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f"[{current_time}] Pinging {url}...")
+
+                response = requests.get(url, timeout=10)
+                print(f"[{current_time}] Pinged {url}: {response.status_code}, Text: {response.text}")
+            except requests.exceptions.RequestException as e:
+                print(f"[{current_time}] Error pinging {url}: {e}")
+
         time.sleep(300)  # Ping every 5 minutes
 
 
