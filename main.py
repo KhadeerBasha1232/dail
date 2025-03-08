@@ -112,7 +112,7 @@ def keep_flask_alive():
                 print(f"[{current_time}] Pinging {url}...")
 
                 response = requests.get(url, timeout=10)
-                print(f"[{current_time}] Pinged {url}: {response.status_code}, Text: {response.text}")
+                print(f"[{current_time}] Pinged {url}: {response.status_code}, Text: {response.text[:30]}")
             except requests.exceptions.RequestException as e:
                 print(f"[{current_time}] Error pinging {url}: {e}")
 
