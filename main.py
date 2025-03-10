@@ -19,6 +19,12 @@ users = [
         "repo": "daily-repo",
         "branch": "main",
     },
+    {
+        "token": "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",
+        "owner": "RohanthBaipilla",
+        "repo": "daily-repo",
+        "branch": "main"
+    },
 ]
 
 # Function to get headers for authentication
