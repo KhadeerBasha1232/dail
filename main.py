@@ -100,7 +100,7 @@ def run_periodically():
             commit_and_push_empty(user)
 
         # Generate a random time interval between 1 minute (60 seconds) and 4 hours (14400 seconds)
-        interval = random.randint(1, 240) * 60
+        interval = int(random.expovariate(1 / 7200))  # Avg commit interval of 2 hours
         print(f"Next commits in {interval / 60} minutes...")
         time.sleep(interval)
 
