@@ -130,7 +130,7 @@ def handle_ask(message):
 
     chunks = split_text_into_chunks(response, 3000)
     for chunk in chunks:
-        bot.send_message(chat_id, chunk, parse_mode='MarkdownV2', disable_web_page_preview=True)
+        bot.reply_to(message, chunk, parse_mode='MarkdownV2', disable_web_page_preview=True)
 
     bot.delete_message(chat_id, processing_message.message_id)
 
