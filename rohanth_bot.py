@@ -4,6 +4,7 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 import re
+import time
 
 # Load environment variables
 load_dotenv()
@@ -20,12 +21,14 @@ model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 print('🤖 Telegram bot is running...')
 
+# Store last message timestamps to prevent spam
+user_last_message = {}
+
 # Function to format text for MarkdownV2
 def format_text(text):
-    special_chars = r'_*[]()~`>#+-=|{}.!'
-    return re.sub(r'([{}])'.format(re.escape(special_chars)), r'\\\1', text)
+    return re.sub(r'([_*[\]()~`>#+\-=|{}.!])', r'\\\1', text)  # Escape special characters
 
-# Function to split long messages into chunks (max 4096 chars)
+# Function to split long messages into chunks
 def split_text_into_chunks(text, max_length=4096):
     words = text.split(' ')
     chunks = []
@@ -46,25 +49,28 @@ def split_text_into_chunks(text, max_length=4096):
 # Function to generate an image using Hugging Face API
 def generate_image(prompt):
     print(f'🎨 Generating image: {prompt}')
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
-        headers={"Authorization": f"Bearer {HF_API_KEY}", "Content-Type": "application/json"},
-        json={
-            "inputs": prompt,
-            "parameters": {
-                "num_inference_steps": 30,
-                "guidance_scale": 7.5,
-                "negative_prompt": "blurry, bad quality, distorted, deformed"
-            }
-        },
-    )
+    try:
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+            headers={"Authorization": f"Bearer {HF_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "inputs": prompt,
+                "parameters": {
+                    "num_inference_steps": 30,
+                    "guidance_scale": 7.5,
+                    "negative_prompt": "blurry, bad quality, distorted, deformed"
+                }
+            },
+            timeout=60
+        )
 
-    if response.status_code == 200:
-        return response.content
-    elif response.status_code == 503:
-        return None  # Model might be loading
-    else:
-        print(f'❌ Error: {response.json()}')
+        if response.status_code == 200:
+            return response.content
+        else:
+            print(f'❌ Error: {response.json()}')
+            return None
+    except requests.RequestException as e:
+        print(f'❌ Request error: {e}')
         return None
 
 # Function to get response from Gemini API
@@ -75,6 +81,14 @@ def get_gemini_response(prompt):
     except Exception as error:
         print(f'❌ Error with Gemini API: {error}')
         return format_text("⚠️ Error: I couldn't process your request at the moment.")
+
+# Cooldown function to prevent spam
+def is_spamming(user_id, cooldown=5):
+    current_time = time.time()
+    if user_id in user_last_message and current_time - user_last_message[user_id] < cooldown:
+        return True
+    user_last_message[user_id] = current_time
+    return False
 
 # Handle /start command
 @bot.message_handler(commands=['start'])
@@ -96,8 +110,12 @@ def handle_imagine(message):
     chat_id = message.chat.id
     image_prompt = message.text[9:].strip()
 
-    if not image_prompt:
-        bot.reply_to(message, format_text('⚠️ Please provide a description for the image.\nExample: `/imagine sunset over mountains`'), parse_mode='MarkdownV2')
+    if not image_prompt or '@' in image_prompt:
+        bot.reply_to(message, format_text('⚠️ Please provide a valid description.\nExample: `/imagine sunset over mountains`'), parse_mode='MarkdownV2')
+        return
+
+    if is_spamming(chat_id):
+        bot.reply_to(message, format_text("⚠️ Please wait a few seconds before requesting again."), parse_mode='MarkdownV2')
         return
 
     generating_message = bot.reply_to(message, '🎨 Generating your image...')
@@ -119,43 +137,48 @@ def handle_imagine(message):
 def handle_ask(message):
     chat_id = message.chat.id
     question = message.text[5:].strip()
+    
+    # Remove bot username (@botname) if present
+    question = re.sub(r'@\w+', '', question).strip().lower()
 
-    if not question:
-        bot.reply_to(message, format_text('⚠️ Please provide a question.\nExample: `/ask What is artificial intelligence?`'), parse_mode='MarkdownV2')
-        return
-
-    processing_message = bot.reply_to(message, '🤖 Processing your question...')
-    bot.send_chat_action(chat_id, 'typing')
-    response = get_gemini_response(question)
-
-    chunks = split_text_into_chunks(response, 3000)
-    for chunk in chunks:
-        bot.send_message(chat_id, chunk, parse_mode='MarkdownV2', disable_web_page_preview=True)
-
-    bot.delete_message(chat_id, processing_message.message_id)
-
-# Handle all other messages
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    chat_id = message.chat.id
-    user_message = message.text.lower().strip()
-
-    # Handle questions about bot creator
+    # Check if the user is asking about the owner
     owner_keywords = ['who is your owner', 'who created you', 'who made you', 'your creator', 'your owner']
-    if any(keyword in user_message for keyword in owner_keywords):
+    if any(keyword in question for keyword in owner_keywords):
         bot.reply_to(message, format_text("👨‍💻 I was created by *BAIPILLA SWAMY ESHWAR ROHANTH*."), parse_mode='MarkdownV2')
         return
 
-    # Remind users to use commands
-    bot.reply_to(
-        message,
-        format_text(
-            "⚠️ Please use commands to interact with me:\n"
-            "🔹 `/ask [your question]` - For text responses\n"
-            "🔹 `/imagine [description]` - For image generation"
-        ),
-        parse_mode='MarkdownV2'
-    )
+    if not question:
+        bot.reply_to(message, format_text('⚠️ Please provide a valid question.'), parse_mode='MarkdownV2')
+        return
+
+    if is_spamming(chat_id):
+        bot.reply_to(message, format_text("⚠️ Please wait a few seconds before asking again."), parse_mode='MarkdownV2')
+        return
+
+    try:
+        processing_message = bot.reply_to(message, '🤖 Thinking...')
+        bot.send_chat_action(chat_id, 'typing')
+
+        response = get_gemini_response(question)
+        if not response:
+            bot.reply_to(message, format_text("⚠️ No response generated. Please try again."), parse_mode='MarkdownV2')
+            return
+
+        for chunk in split_text_into_chunks(response, 2800):
+            bot.send_message(chat_id, chunk, parse_mode='MarkdownV2')
+
+    except telebot.apihelper.ApiException as e:
+        print(f'⚠️ Telegram API Error: {e}')
+        bot.reply_to(message, format_text("⚠️ An error occurred while sending the message."), parse_mode='MarkdownV2')
+
+    except Exception as e:
+        bot.reply_to(message, format_text(f'⚠️ Error: {str(e)}'), parse_mode='MarkdownV2')
+
+    finally:
+        try:
+            bot.delete_message(chat_id, processing_message.message_id)
+        except Exception:
+            pass
 
 # Run the bot
 if __name__ == '__main__':
