@@ -106,7 +106,7 @@ def run_periodically():
 
 
 urls = [
-    "https://quaint-albertine-clustercompany-99d4f8b7.koyeb.app/",
+    "https://ideological-worm-clustercompany-6a249f1e.koyeb.app/",
     "https://kb-help.onrender.com/"
 ]
 
@@ -122,7 +122,7 @@ def keep_flask_alive():
             except requests.exceptions.RequestException as e:
                 print(f"[{current_time}] Error pinging {url}: {e}")
 
-        time.sleep(300)  # Ping every 5 minutes
+        time.sleep(180)  # Ping every 5 minutes
 
 
 
