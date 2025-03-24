@@ -104,59 +104,26 @@ def send_welcome(message):
     )
     bot.reply_to(message, welcome_text, parse_mode='MarkdownV2')
 
-# Handle /imagine command
-@bot.message_handler(commands=['imagine'])
-def handle_imagine(message):
-    chat_id = message.chat.id
-    image_prompt = message.text[9:].strip()
-
-    if not image_prompt or '@' in image_prompt:
-        bot.reply_to(message, format_text('⚠️ Please provide a valid description.\nExample: `/imagine sunset over mountains`'), parse_mode='MarkdownV2')
-        return
-
-    if is_spamming(chat_id):
-        bot.reply_to(message, format_text("⚠️ Please wait a few seconds before requesting again."), parse_mode='MarkdownV2')
-        return
-
-    generating_message = bot.reply_to(message, '🎨 Generating your image...')
-    bot.send_chat_action(chat_id, 'upload_photo')
-
-    try:
-        image_buffer = generate_image(image_prompt)
-        if image_buffer:
-            bot.send_photo(chat_id, image_buffer, caption=format_text(f'🖼️ Generated image for: "{image_prompt}"'), reply_to_message_id=message.message_id)
-        else:
-            bot.reply_to(message, format_text('⚠️ The image generation service is temporarily unavailable. Try again later.'), parse_mode='MarkdownV2')
-    except Exception as e:
-        bot.reply_to(message, format_text(f'⚠️ Failed to generate image: {str(e)}'), parse_mode='MarkdownV2')
-
-    bot.delete_message(chat_id, generating_message.message_id)
-
 # Handle /ask command
 @bot.message_handler(commands=['ask'])
 def handle_ask(message):
     chat_id = message.chat.id
-    question = message.text[5:].strip()
-    
-    # Remove bot username (@botname) if present
-    question = re.sub(r'@\w+', '', question).strip().lower()
 
-    # Check if the user is asking about the owner
-    owner_keywords = ['who is your owner', 'who created you', 'who made you', 'your creator', 'your owner']
-    if any(keyword in question for keyword in owner_keywords):
-        bot.reply_to(message, format_text("👨‍💻 I was created by *BAIPILLA SWAMY ESHWAR ROHANTH*."), parse_mode='MarkdownV2')
-        return
+    # Extract question properly, whether with or without @botname
+    parts = message.text.split(maxsplit=1)
+    question = parts[1] if len(parts) > 1 else ""
 
     if not question:
         bot.reply_to(message, format_text('⚠️ Please provide a valid question.'), parse_mode='MarkdownV2')
         return
 
+    # Prevent spam
     if is_spamming(chat_id):
         bot.reply_to(message, format_text("⚠️ Please wait a few seconds before asking again."), parse_mode='MarkdownV2')
         return
 
     try:
-        processing_message = bot.reply_to(message, '🤖 Thinking...')
+        processing_message = bot.reply_to(message, '🤖 Thinking...', reply_to_message_id=message.message_id)
         bot.send_chat_action(chat_id, 'typing')
 
         response = get_gemini_response(question)
@@ -165,7 +132,7 @@ def handle_ask(message):
             return
 
         for chunk in split_text_into_chunks(response, 2800):
-            bot.send_message(chat_id, chunk, parse_mode='MarkdownV2')
+            bot.send_message(chat_id, chunk, parse_mode='MarkdownV2', reply_to_message_id=message.message_id)
 
     except telebot.apihelper.ApiException as e:
         print(f'⚠️ Telegram API Error: {e}')
@@ -179,6 +146,37 @@ def handle_ask(message):
             bot.delete_message(chat_id, processing_message.message_id)
         except Exception:
             pass
+
+# Handle /imagine command
+@bot.message_handler(commands=['imagine'])
+def handle_imagine(message):
+    chat_id = message.chat.id
+
+    # Extract image description properly
+    parts = message.text.split(maxsplit=1)
+    image_prompt = parts[1] if len(parts) > 1 else ""
+
+    if not image_prompt or '@' in image_prompt:
+        bot.reply_to(message, format_text('⚠️ Please provide a valid description.\nExample: `/imagine sunset over mountains`'), parse_mode='MarkdownV2')
+        return
+
+    if is_spamming(chat_id):
+        bot.reply_to(message, format_text("⚠️ Please wait a few seconds before requesting again."), parse_mode='MarkdownV2')
+        return
+
+    generating_message = bot.reply_to(message, '🎨 Generating your image...', reply_to_message_id=message.message_id)
+    bot.send_chat_action(chat_id, 'upload_photo')
+
+    try:
+        image_buffer = generate_image(image_prompt)
+        if image_buffer:
+            bot.send_photo(chat_id, image_buffer, caption=format_text(f'🖼️ Generated image for: "{image_prompt}"'), reply_to_message_id=message.message_id)
+        else:
+            bot.reply_to(message, format_text('⚠️ The image generation service is temporarily unavailable. Try again later.'), parse_mode='MarkdownV2')
+    except Exception as e:
+        bot.reply_to(message, format_text(f'⚠️ Failed to generate image: {str(e)}'), parse_mode='MarkdownV2')
+
+    bot.delete_message(chat_id, generating_message.message_id)
 
 # Run the bot
 if __name__ == '__main__':
