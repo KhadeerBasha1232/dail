@@ -134,28 +134,6 @@ def handle_ask(message):
 
     bot.delete_message(chat_id, processing_message.message_id)
 
-# Handle all other messages
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    chat_id = message.chat.id
-    user_message = message.text.lower().strip()
-
-    # Handle questions about bot creator
-    owner_keywords = ['who is your owner', 'who created you', 'who made you', 'your creator', 'your owner']
-    if any(keyword in user_message for keyword in owner_keywords):
-        bot.reply_to(message, format_text("👨‍💻 I was created by *BAIPILLA SWAMY ESHWAR ROHANTH*."), parse_mode='MarkdownV2')
-        return
-
-    # Remind users to use commands
-    bot.reply_to(
-        message,
-        format_text(
-            "⚠️ Please use commands to interact with me:\n"
-            "🔹 `/ask [your question]` - For text responses\n"
-            "🔹 `/imagine [description]` - For image generation"
-        ),
-        parse_mode='MarkdownV2'
-    )
 
 # Run the bot
 if __name__ == '__main__':
