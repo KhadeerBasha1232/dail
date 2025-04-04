@@ -7,7 +7,7 @@ from supabase import create_client, Client
 
 # 🔹 Telegram Bot Config
 BOT_TOKEN = "7659495124:AAEdFN1vItHUWzY0Im2PP6LyuPwjO7jRp0o"
-CHAT_ID = "-4615880643"
+CHAT_ID = "-1002649556090"
 
 # 🔹 Supabase Config
 SUPABASE_URL = "https://zxuntuqugjptwvqgpeti.supabase.co"
