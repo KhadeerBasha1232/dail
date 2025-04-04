@@ -15,32 +15,13 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 # Job Titles & Locations to Search
 POSITIONS = [
-    "Python-Developer-Fresher", "Python-Developer-Intern",
-    "Backend-Engineer-Fresher", "Backend-Engineer-Intern",
-    "Full-Stack-Developer-Fresher", "Full-Stack-Developer-Intern",
-    "Software-Engineer-Fresher", "Software-Engineer-Intern",
-    "React-Developer-Fresher", "React-Developer-Intern",
-    "Java-Developer-Fresher", "Java-Developer-Intern",
-    "Django-Developer-Fresher", "Django-Developer-Intern",
-    "Flask-Developer-Fresher", "Flask-Developer-Intern",
-    "FastAPI-Developer-Fresher", "FastAPI-Developer-Intern",
-    "MERN-Stack-Developer-Fresher", "MERN-Stack-Developer-Intern",
-    "Data-Scientist-Fresher", "Data-Scientist-Intern",
-    "Software-Developer-Fresher", "Software-Developer-Intern"
+    "Python-Developer", "Backend-Engineer", "Full-Stack-Developer", "Software-Engineer", "Frontend-Engineer",
+    "React-Developer", "Java-Developer", "Django-Developer", "Flask-Developer", 
+    "FastAPI-Developer", "Spring-Boot-Developer", "MERN-Stack-Developer", "Hibernate-Developer",
+    "Blockchain-Developer", "Data-Scientist", "Machine-Learning-Engineer", "AI-Engineer", "Software-Developer-Intern"
 ]
 
-LOCATIONS = [
-    "India", "India(Remote)",
-    "Hyderabad", "Hyderabad(Remote)", "Hyderabad(Hybrid)",
-    "Bangalore", "Bangalore(Remote)", "Bangalore(Hybrid)",
-    "Chennai", "Chennai(Remote)", "Chennai(Hybrid)",
-    "Pune", "Pune(Remote)", "Pune(Hybrid)",
-    "Delhi", "Delhi(Remote)", "Delhi(Hybrid)",
-    "Mumbai", "Mumbai(Remote)", "Mumbai(Hybrid)",
-    "Gurgaon", "Gurgaon(Remote)", "Gurgaon(Hybrid)",
-    "Noida", "Noida(Remote)", "Noida(Hybrid)"
-]
-
+LOCATIONS = ["India", "India(Remote)", "Hyderabad", "Bangalore", "Chennai", "Pune", "Delhi", "Mumbai", "Gurgaon", "Noida"]
 EXPERIENCE_LEVELS = ["Entry-Level", "Internship"]
 
 # Initialize Supabase Client
