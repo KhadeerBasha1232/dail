@@ -9,3 +9,4 @@ telebot
 beautifulsoup4
 supabase
 asyncio
+standard-imghdr
