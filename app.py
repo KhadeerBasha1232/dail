@@ -6,7 +6,7 @@ import requests
 
 # === CONFIGURATION ===
 TELEGRAM_BOT_TOKEN = '8167126085:AAEMm0bXMM1WzPwh0gVgAK8hxtH94qTmFQo'
-CHAT_ID = '8167126085'  # Replace with your actual chat/user ID
+CHAT_ID = '1954098115'  # Replace with your actual chat/user ID
 
 app = Flask(__name__)
 
