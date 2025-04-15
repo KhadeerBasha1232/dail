@@ -32,35 +32,24 @@ bot = Bot(token=BOT_TOKEN)
 
 async def fetch_sent_jobs():
     """Fetch sent job IDs from Supabase."""
-    print("Fetching sent job IDs from Supabase...")
     response = supabase.table("sent_jobs").select("job_id").execute()
     if not response.data:  # Check if data is None or empty
-        print("No sent job IDs found or an error occurred.")
         return set()
-    print(f"Fetched {len(response.data)} sent job IDs.")
     return {row["job_id"] for row in response.data}
 
 async def save_sent_job(job_id):
     """Save a sent job ID to Supabase."""
-    print(f"Saving job ID {job_id} to Supabase...")
     response = supabase.table("sent_jobs").insert({"job_id": job_id}).execute()
-    if not response.data:  # Check if data is None or empty
-        print(f"Error saving job ID {job_id}. Response: {response}")
-    else:
-        print(f"Job ID {job_id} saved successfully.")
 
 def parse_jobs(html_content):
     """Extract job details from LinkedIn HTML response."""
-    print("Parsing jobs from HTML content...")
     soup = BeautifulSoup(html_content, 'html.parser')
     job_list = []
     job_cards = soup.find_all('li')
-    print(f"Found {len(job_cards)} job cards in the HTML.")
 
     for job in job_cards:
         job_id = extract_job_id_from_urn(job)
         if not job_id or job_id in sent_jobs:
-            print(f"Skipping job with ID {job_id} (already sent or invalid).")
             continue
 
         job_link_tag = job.find('a', class_='base-card__full-link')
@@ -71,7 +60,6 @@ def parse_jobs(html_content):
 
         # Filter out titles containing "Sr." or "years"
         if "Sr." in job_title or "years" in job_title or "yrs" in job_title or "exp" in job_title or "req" in job_title or "Senior" in job_title or "senior" in job_title or "sr" in job_title:
-            print(f"Skipping job with title '{job_title}' (contains 'Sr.' or 'years').")
             continue
 
         company_tag = job.find('h4', class_='base-search-card__subtitle')
@@ -83,7 +71,6 @@ def parse_jobs(html_content):
         time_tag = job.find('time', class_='job-search-card__listdate--new')
         posted_time = time_tag.get_text(strip=True) if time_tag else "N/A"
 
-        print(f"Parsed job: {job_title} at {company_name} in {location}.")
         job_list.append({
             "job_id": job_id,
             "title": job_title,
@@ -93,7 +80,6 @@ def parse_jobs(html_content):
             "posted_time": posted_time
         })
 
-    print(f"Total parsed jobs: {len(job_list)}")
     return job_list
 
 def extract_job_id_from_urn(job_li):
@@ -109,12 +95,9 @@ async def send_jobs_to_telegram(jobs, keyword, location, experience):
     """Send only new job posts to Telegram asynchronously."""
     global sent_jobs
 
-    print(f"Total jobs fetched: {len(jobs)}")
     new_jobs = [job for job in jobs if job["job_id"] not in sent_jobs]
-    print(f"New jobs to send: {len(new_jobs)}")
 
     if not new_jobs:
-        print("No new jobs to send.")
         return  # No new jobs to send
 
     for job in new_jobs[:5]:  # Send first 5 new jobs to avoid spam
@@ -129,18 +112,14 @@ async def send_jobs_to_telegram(jobs, keyword, location, experience):
         )
 
         try:
-            print(f"Sending job: {job['title']} ({job['job_id']})")
             await bot.send_message(CHAT_ID, message, parse_mode="Markdown", disable_web_page_preview=True)
-            print(f"Job sent successfully: {job['title']} ({job['job_id']})")
             await save_sent_job(job["job_id"])
             sent_jobs.add(job["job_id"])
         except Exception as e:
-            print(f"Failed to send job {job['job_id']}: {e}")
         await asyncio.sleep(2)  # Use asyncio.sleep() instead of time.sleep()
 
 async def fetch_linkedin_jobs_one_combination(keyword, location, experience):
     """Fetch jobs for a single combination of keyword, location, and experience level."""
-    print(f"Fetching jobs for keyword: {keyword}, location: {location}, experience: {experience}")
     jobs = []
     headers = {"User-Agent": "Mozilla/5.0"}
 
@@ -148,38 +127,28 @@ async def fetch_linkedin_jobs_one_combination(keyword, location, experience):
         url = (f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?"
        f"keywords={keyword}&location={location}&f_TPR=r3600&f_E={experience}"
        f"&sortBy=DD&start={start}&f_WT=2,3&f_JT=F")
-        print(f"Fetching jobs from URL: {url}")
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
-            print(f"Successfully fetched jobs for URL: {url}")
             jobs.extend(parse_jobs(response.text))
         else:
-            print(f"Failed to fetch jobs for URL: {url}, status code: {response.status_code}")
             break  # Stop if LinkedIn blocks further requests
 
         # Add a 2-second delay between API calls
         await asyncio.sleep(2)
 
-    print(f"Total jobs fetched for this combination: {len(jobs)}")
     return jobs
 
 async def main():
     global sent_jobs
-    print("Starting job bot...")
     sent_jobs = await fetch_sent_jobs()  # Load sent jobs from Supabase
-    print(f"Initial sent jobs count: {len(sent_jobs)}")
 
     while True:
         for keyword in POSITIONS:
             for location in LOCATIONS:
                 for experience in EXPERIENCE_LEVELS:
-                    print(f"Fetching jobs for combination: {keyword}, {location}, {experience}")
                     jobs = await fetch_linkedin_jobs_one_combination(keyword, location, experience)
-                    print("Sending jobs to Telegram...")
                     await send_jobs_to_telegram(jobs, keyword, location, experience)  # Pass combination details
-                    print("Sleeping for 5 seconds before fetching the next combination...")
                     await asyncio.sleep(5)  # Sleep for 5 seconds between combinations
-        print("Completed one cycle of fetching all combinations. Sleeping for 5 minutes...")
         await asyncio.sleep(300)  # Sleep for 5 minutes between cycles
 
 if __name__ == "__main__":
