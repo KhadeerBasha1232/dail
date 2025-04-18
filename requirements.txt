@@ -11,3 +11,4 @@ supabase
 asyncio
 standard-imghdr
 pillow
+httpx
