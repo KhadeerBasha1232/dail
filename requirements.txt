@@ -12,3 +12,4 @@ asyncio
 standard-imghdr
 pillow
 httpx
+telethon
