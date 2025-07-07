@@ -147,7 +147,7 @@ async def fetch_linkedin_jobs_one_combination(keyword, location, experience):
     for start in range(0, 51, 25):  # Fetch up to 50 jobs per query
         url = (f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?"
        f"keywords={keyword}&location={location}&f_TPR=r3600&f_E={experience}"
-       f"&sortBy=DD&start={start}&f_WT=2,3&f_JT=F")
+       f"&sortBy=DD&start={start}&f_WT=2&f_JT=F")
         print(f"Fetching jobs from URL: {url}")
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
