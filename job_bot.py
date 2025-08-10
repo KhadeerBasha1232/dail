@@ -102,26 +102,31 @@ async def send_job(job, keyword, location, experience):
     await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode=ParseMode.MARKDOWN)
 
 async def main():
-    for keyword in POSITIONS:
-        for location in LOCATIONS:
-            for experience in EXPERIENCE_LEVELS:
-                try:
-                    print(f"\n[INFO] Fetching jobs for: {keyword} | {location} | {experience}")
-                    url = build_url(keyword, location)
-                    print(f"[URL] {url}")
-                    headers = {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-                    }
-                    res = requests.get(url, headers=headers)
-                    jobs = extract_jobs(res.text)
+    while True:  # <-- run forever
+        for keyword in POSITIONS:
+            for location in LOCATIONS:
+                for experience in EXPERIENCE_LEVELS:
+                    try:
+                        print(f"\n[INFO] Fetching jobs for: {keyword} | {location} | {experience}")
+                        url = build_url(keyword, location)
+                        print(f"[URL] {url}")
+                        headers = {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                        }
+                        res = requests.get(url, headers=headers)
+                        jobs = extract_jobs(res.text)
 
-                    for job in jobs:
-                        await send_job(job, keyword, location, experience)
-                        await asyncio.sleep(1.2)
+                        for job in jobs:
+                            await send_job(job, keyword, location, experience)
+                            await asyncio.sleep(1.2)  # avoid rate limits
 
-                except Exception as e:
-                    print(f"[ERROR] Fetching {keyword} - {location}: {e}")
-                await asyncio.sleep(1)
+                    except Exception as e:
+                        print(f"[ERROR] Fetching {keyword} - {location}: {e}")
+                    await asyncio.sleep(1)
+
+        print("[INFO] Sleeping 30 minutes before next cycle...")
+        await asyncio.sleep(1800)  # wait 30 minutes before checking again
+
 
 if __name__ == "__main__":
     print("✅ Job Scraper Started...")
