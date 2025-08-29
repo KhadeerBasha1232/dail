@@ -8,7 +8,7 @@ import time
 # Define user details as objects
 users = [
     {
-        "token": "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",  # Replace with first GitHub token
+        "token": "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",  # Replace with first GitHub token
         "owner": "KhadeerBasha1232", 
         "repo": "daily-repo",
         "branch": "main",
