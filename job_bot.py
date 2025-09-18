@@ -17,7 +17,32 @@ POSITIONS = [
     "Blockchain-Developer", "Data-Scientist", "Machine-Learning-Engineer", "AI-Engineer", "Software-Developer-Intern"
 ]
 
-LOCATIONS = ["India", "India(Remote)", "Hyderabad", "Bangalore", "Chennai", "Pune", "Delhi", "Mumbai", "Gurgaon", "Noida"]
+# Function to detect current location based on IP
+def get_current_location():
+    try:
+        response = requests.get("https://ipinfo.io/json", timeout=5)
+        data = response.json()
+        country = data.get("country", "Unknown")
+        city = data.get("city", "Unknown")
+        return country, city
+    except Exception as e:
+        print(f"[ERROR] Failed to detect location: {e}")
+        return "Unknown", "Unknown"
+
+# Set locations based on detected country
+country, city = get_current_location()
+if country == "IN":  # India
+    LOCATIONS = ["India", "India(Remote)", "Hyderabad", "Bangalore", "Chennai", "Pune", "Delhi", "Mumbai", "Gurgaon", "Noida"]
+elif country == "DE":  # Germany
+    LOCATIONS = ["Germany", "Germany(Remote)", "Frankfurt", "Berlin", "Munich", "Hamburg", "Cologne", "Stuttgart"]
+elif country == "US":  # United States
+    LOCATIONS = ["United States", "United States(Remote)", "New York", "San Francisco", "Seattle", "Austin", "Boston"]
+else:
+    # Default to global or detected city
+    LOCATIONS = [f"{country}(Remote)", city] if city != "Unknown" else ["Remote"]
+
+print(f"[INFO] Detected location: Country={country}, City={city}. Using locations: {LOCATIONS}")
+
 EXPERIENCE_LEVELS = ["Entry-Level", "Internship"]
 
 SKIP_WORDS = [
@@ -101,31 +126,26 @@ async def send_job(job, keyword, location, experience):
     await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode=ParseMode.MARKDOWN)
 
 async def main():
-    while True:  # <-- run forever
-        for keyword in POSITIONS:
-            for location in LOCATIONS:
-                for experience in EXPERIENCE_LEVELS:
-                    try:
-                        print(f"\n[INFO] Fetching jobs for: {keyword} | {location} | {experience}")
-                        url = build_url(keyword, location)
-                        print(f"[URL] {url}")
-                        headers = {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-                        }
-                        res = requests.get(url, headers=headers)
-                        jobs = extract_jobs(res.text)
+    for keyword in POSITIONS:
+        for location in LOCATIONS:
+            for experience in EXPERIENCE_LEVELS:
+                try:
+                    print(f"\n[INFO] Fetching jobs for: {keyword} | {location} | {experience}")
+                    url = build_url(keyword, location)
+                    print(f"[URL] {url}")
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                    }
+                    res = requests.get(url, headers=headers)
+                    jobs = extract_jobs(res.text)
 
-                        for job in jobs:
-                            await send_job(job, keyword, location, experience)
-                            await asyncio.sleep(1.2)  # avoid rate limits
+                    for job in jobs:
+                        await send_job(job, keyword, location, experience)
+                        await asyncio.sleep(1.2)
 
-                    except Exception as e:
-                        print(f"[ERROR] Fetching {keyword} - {location}: {e}")
-                    await asyncio.sleep(1)
-
-        print("[INFO] Sleeping 30 minutes before next cycle...")
-        await asyncio.sleep(1800)  # wait 30 minutes before checking again
-
+                except Exception as e:
+                    print(f"[ERROR] Fetching {keyword} - {location}: {e}")
+                await asyncio.sleep(1)
 
 if __name__ == "__main__":
     print("✅ Job Scraper Started...")
