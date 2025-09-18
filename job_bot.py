@@ -36,7 +36,6 @@ def build_url(keyword, location):
         "f_TPR": "r1800",  # last 30 mins
         "f_WT": "2",       # remote
         "f_JT": "F",       # full-time
-        "geoId": "102713980",
         "position": "1",
         "pageNum": "0"
     }
