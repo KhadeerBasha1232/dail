@@ -8,7 +8,7 @@ import time
 # Define user details as objects
 users = [
     {
-        "token": "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",  # Replace with first GitHub token
+        "token": "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",  # Replace with first GitHub token
         "owner": "KhadeerBasha1232", 
         "repo": "daily-repo",
         "branch": "main",
@@ -99,9 +99,11 @@ def run_periodically():
         for user in users:
             commit_and_push_empty(user)
 
-        # Generate a random time interval between 1 minute (60 seconds) and 4 hours (14400 seconds)
-        interval = int(random.expovariate(1 / 7200))  # Avg commit interval of 2 hours
-        print(f"Next commits in {interval / 60} minutes...")
+        # Generate a random time interval between 1 hour (3600 seconds) and 4 hours (14400 seconds)
+        interval = random.randint(3600, 14400)  # Random interval between 1-4 hours
+        hours = interval // 3600
+        minutes = (interval % 3600) // 60
+        print(f"Next commits in {hours} hours and {minutes} minutes...")
         time.sleep(interval)
 
 
@@ -122,7 +124,7 @@ def keep_flask_alive():
             except requests.exceptions.RequestException as e:
                 print(f"[{current_time}] Error pinging {url}: {e}")
 
-        time.sleep(180)  # Ping every 5 minutes
+        time.sleep(180)  # Ping every 3 minutes
 
 
 
