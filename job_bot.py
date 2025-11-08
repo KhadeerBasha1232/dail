@@ -1,152 +1,156 @@
 import requests
+import asyncio
 from bs4 import BeautifulSoup
 from telegram import Bot
-from telegram.constants import ParseMode
-import urllib.parse
-import asyncio
 from collections import deque
 
-TOKEN = "7659495124:AAEdFN1vItHUWzY0Im2PP6LyuPwjO7jRp0o"
+BOT_TOKEN = "7659495124:AAEdFN1vItHUWzY0Im2PP6LyuPwjO7jRp0o"
 CHAT_ID = "-1002649556090"
-bot = Bot(token=TOKEN)
 
 POSITIONS = [
-    "Python-Developer", "Backend-Engineer", "Full-Stack-Developer", "Software-Engineer", "Frontend-Engineer",
-    "React-Developer", "Java-Developer", "Django-Developer", "Flask-Developer", 
-    "FastAPI-Developer", "Spring-Boot-Developer", "MERN-Stack-Developer", "Hibernate-Developer",
-    "Blockchain-Developer", "Data-Scientist", "Machine-Learning-Engineer", "AI-Engineer", "Software-Developer-Intern"
+    "Python Developer", "Backend Engineer", "Full Stack Developer", "Software Engineer", "Frontend Engineer",
+    "React Developer", "Java Developer", "Django Developer", "Flask Developer",
+    "FastAPI Developer", "Spring Boot Developer", "MERN Stack Developer", "Hibernate Developer",
+    "Blockchain Developer", "Data Scientist", "Machine Learning Engineer", "AI Engineer", "Software Developer Intern"
 ]
 
-# Function to detect current location based on IP
-def get_current_location():
-    try:
-        response = requests.get("https://ipinfo.io/json", timeout=5)
-        data = response.json()
-        country = data.get("country", "Unknown")
-        city = data.get("city", "Unknown")
-        return country, city
-    except Exception as e:
-        print(f"[ERROR] Failed to detect location: {e}")
-        return "Unknown", "Unknown"
+LOCATIONS = ["India", "Hyderabad", "Bangalore", "Chennai", "Pune", "Delhi", "Mumbai", "Gurgaon", "Noida"]
+EXPERIENCE_LEVELS = {"Entry-Level": 2, "Internship": 1}
 
-# Set locations based on detected country
-country, city = get_current_location()
-if country == "IN":  # India
-    LOCATIONS = ["India", "India(Remote)", "Hyderabad", "Bangalore", "Chennai", "Pune", "Delhi", "Mumbai", "Gurgaon", "Noida"]
-elif country == "DE":  # Germany
-    LOCATIONS = ["Germany", "Germany(Remote)", "Frankfurt", "Berlin", "Munich", "Hamburg", "Cologne", "Stuttgart"]
-elif country == "US":  # United States
-    LOCATIONS = ["United States", "United States(Remote)", "New York", "San Francisco", "Seattle", "Austin", "Boston"]
-else:
-    # Default to global or detected city
-    LOCATIONS = [f"{country}(Remote)", city] if city != "Unknown" else ["Remote"]
+bot = Bot(token=BOT_TOKEN)
 
-print(f"[INFO] Detected location: Country={country}, City={city}. Using locations: {LOCATIONS}")
+def extract_job_id_from_urn(job_li):
+    job_div = job_li.find('div', class_='base-card')
+    if job_div:
+        data_urn = job_div.get("data-entity-urn", "")
+        if "jobPosting:" in data_urn:
+            return data_urn.split("jobPosting:")[-1]
+    return None
 
-EXPERIENCE_LEVELS = ["Entry-Level", "Internship"]
-
-SKIP_WORDS = [
-    "senior", "sr.", "sr ", "s.r", "lead", "staff", "manager", "director",
-    "head", "principal", "10 years", "5 years", "7 years", "8 years", "6 years",
-    "10 yrs", "7 yrs", "5 yrs", "6 yrs", "8 yrs", "experienced", "require", "required"
-]
-
-sent_ids = deque(maxlen=5000)
-
-def build_url(keyword, location):
-    base_url = "https://www.linkedin.com/jobs/search"
-    params = {
-        "keywords": keyword,
-        "location": location,
-        "f_TPR": "r1800",  # last 30 mins
-        "f_WT": "2",       # remote
-        "f_JT": "F",       # full-time
-        "position": "1",
-        "pageNum": "0"
-    }
-    return f"{base_url}?{urllib.parse.urlencode(params)}"
-
-def should_skip(title):
-    if any(word in title.lower() for word in SKIP_WORDS):
-        print(f"[SKIP] Title contains skip word: {title}")
-        return True
-    return False
-
-def extract_jobs(html):
-    soup = BeautifulSoup(html, "html.parser")
-    job_cards = soup.select(".base-search-card")
-    print(f"Found {len(job_cards)} job cards in page.")
+def parse_jobs(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    li_cards = soup.find_all('li')
     jobs = []
-
-    for job in job_cards:
-        title = job.select_one(".base-search-card__title")
-        company = job.select_one(".base-search-card__subtitle")
-        location = job.select_one(".job-search-card__location")
-        posted = job.select_one("time")
-        job_url = job.select_one("a")["href"]
-
-        if not title or not job_url:
-            print("Skipping: Missing title or URL")
+    for job in li_cards:
+        job_id = extract_job_id_from_urn(job)
+        if not job_id or job_id in sent_jobs:
             continue
-
-        if should_skip(title.text):
+        job_link_tag = job.find('a', class_='base-card__full-link')
+        job_url = job_link_tag['href'] if job_link_tag else "N/A"
+        job_title_tag = job.find('h3', class_='base-search-card__title')
+        job_title = job_title_tag.get_text(strip=True) if job_title_tag else "N/A"
+        if any(x in job_title.lower() for x in ["sr", "senior", "lead", "years", "exp", "req", "manager"]):
             continue
+        company_tag = job.find('h4', class_='base-search-card__subtitle')
+        company_name = company_tag.get_text(strip=True) if company_tag else "N/A"
+        location_tag = job.find('span', class_='job-search-card__location')
+        location = location_tag.get_text(strip=True) if location_tag else "N/A"
+        time_tag = job.find('time')
+        posted_time = time_tag.get_text(strip=True) if time_tag else "N/A"
+        jobs.append({
+            "job_id": job_id,
+            "title": job_title,
+            "company": company_name,
+            "location": location,
+            "job_url": job_url,
+            "posted_time": posted_time
+        })
+    return jobs, len(li_cards)
 
-        job_id = job_url.split("view/")[-1].split("?")[0]
-        if job_id in sent_ids:
-            print(f"[DUPLICATE] Already sent job ID: {job_id}")
-            continue
+async def send_jobs_to_telegram(jobs, keyword, location, experience):
+    new_jobs = [job for job in jobs if job["job_id"] not in sent_jobs]
+    print(f" -> New jobs found for ({keyword} | {location} | {experience}): {len(new_jobs)}")
+    for job in new_jobs[:5]:
+        msg = (
+            f"📢 *New Job Opportunity!*\n\n"
+            f"🔹 *Position:* {job['title']}\n"
+            f"🔹 *Company:* {job['company']}\n"
+            f"🔹 *Location:* {job['location']}\n"
+            f"🔹 *Posted:* {job['posted_time']}\n\n"
+            f"🌐 [Apply Here]({job['job_url']})\n\n"
+            f"🔍 `{keyword}` | `{location}` | `{experience}`"
+        )
+        try:
+            await bot.send_message(CHAT_ID, msg, parse_mode="Markdown", disable_web_page_preview=True)
+            sent_jobs.append(job["job_id"])
+            print(f"   -> Sent: {job['job_id']} | {job['title']}")
+        except Exception as e:
+            print(f"   -> Failed to send {job['job_id']}: {e}")
+        await asyncio.sleep(2)
 
-        sent_ids.append(job_id)
-
-        job_data = {
-            "title": title.get_text(strip=True),
-            "company": company.get_text(strip=True) if company else "N/A",
-            "location": location.get_text(strip=True) if location else "N/A",
-            "posted_time": posted.get_text(strip=True) if posted else "Just now",
-            "job_url": job_url
+async def fetch_linkedin_jobs_one_combination(keyword, location, experience):
+    jobs = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Cache-Control": "max-age=0",
+        "Referer": "https://www.linkedin.com/jobs/search/"
+    }
+    f_tpr = "r10800"  # past 3 hours
+    f_e = EXPERIENCE_LEVELS[experience]
+    f_wt = "2%2C3"  # encoded 2,3
+    for start in range(0, 51, 25):
+        params_set = {
+            "keywords": keyword,
+            "location": location,
+            "f_TPR": f_tpr,
+            "f_E": str(f_e),
+            "sortBy": "DD",
+            "start": str(start),
+            "f_WT": "2,3",
+            "f_JT": "F"
         }
-
-        print(f"[NEW] Job: {job_data['title']} at {job_data['company']}")
-        jobs.append(job_data)
-
+        url = (
+            "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?"
+            f"keywords={keyword.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
+            f"&f_TPR={f_tpr}&f_E={f_e}&sortBy=DD&start={start}&f_WT={f_wt}&f_JT=F"
+        )
+        print("Trying combination ->", params_set)
+        print("Request URL ->", url)
+        try:
+            resp = requests.get(url, headers=headers, timeout=15)
+        except Exception as e:
+            print("Request error:", e)
+            await asyncio.sleep(2)
+            continue
+        print("Status code:", resp.status_code, "| Response length:", len(resp.text))
+        if resp.status_code != 200:
+            print("Non-200 response; stopping this combination.")
+            break
+        parsed_jobs, li_count = parse_jobs(resp.text)
+        print("Found <li> cards:", li_count, "| Parsed jobs (after filters):", len(parsed_jobs))
+        if li_count == 0:
+            if "<!DOCTYPE html>" in resp.text and len(resp.text.strip()) < 1000:
+                print(" -> Response looks very small/empty (possible blocking or zero matches).")
+            else:
+                print(" -> No job <li> elements found in response.")
+        jobs.extend(parsed_jobs)
+        await asyncio.sleep(2)
     return jobs
 
-async def send_job(job, keyword, location, experience):
-    message = (
-        f"📢 *New Job Opportunity!*\n\n"
-        f"🔹 *Position:* {job['title']}\n"
-        f"🔹 *Company:* {job['company']}\n"
-        f"🔹 *Location:* {job['location']}\n"
-        f"🔹 *Posted:* {job['posted_time']}\n\n"
-        f"🌐 *Apply Here:* [Click to Apply]({job['job_url']})\n\n"
-        f"🔍 *Search Criteria:* `{keyword}` | `{location}` | `{experience}`"
-    )
-    print(f"[SEND] Sending job: {job['title']}")
-    await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode=ParseMode.MARKDOWN)
-
 async def main():
-    for keyword in POSITIONS:
-        for location in LOCATIONS:
-            for experience in EXPERIENCE_LEVELS:
-                try:
-                    print(f"\n[INFO] Fetching jobs for: {keyword} | {location} | {experience}")
-                    url = build_url(keyword, location)
-                    print(f"[URL] {url}")
-                    headers = {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-                    }
-                    res = requests.get(url, headers=headers)
-                    jobs = extract_jobs(res.text)
-
-                    for job in jobs:
-                        await send_job(job, keyword, location, experience)
-                        await asyncio.sleep(1.2)
-
-                except Exception as e:
-                    print(f"[ERROR] Fetching {keyword} - {location}: {e}")
-                await asyncio.sleep(1)
+    global sent_jobs
+    sent_jobs = deque(maxlen=300)
+    while True:
+        for keyword in POSITIONS:
+            for location in LOCATIONS:
+                for experience in EXPERIENCE_LEVELS:
+                    print("\n===== NEW QUERY =====")
+                    print(f"Keyword: {keyword} | Location: {location} | Experience: {experience} | TimeFilter: past 3 hours (r10800)")
+                    jobs = await fetch_linkedin_jobs_one_combination(keyword, location, experience)
+                    print(f"Total parsed jobs for combination: {len(jobs)}")
+                    await send_jobs_to_telegram(jobs, keyword, location, experience)
+                    await asyncio.sleep(5)
+        print("Cycle complete. Sleeping 10 minutes.")
+        await asyncio.sleep(600)
 
 if __name__ == "__main__":
-    print("✅ Job Scraper Started...")
     asyncio.run(main())
