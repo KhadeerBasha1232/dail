@@ -13,3 +13,4 @@ standard-imghdr
 pillow
 httpx
 telethon
+lxml
